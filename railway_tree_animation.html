@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+	<meta charset="utf-8">
+	<title>Tri-Tree drawing animation</title>
+<style type="text/css">
+body {
+	margin: 0;
+	padding: 0;
+}
+</style>
+<script type="text/javascript">
+// 2017.1.15  Jun Mitani
+
+	const UNIT_LENGTH = 50; 
+	const POINT_R = 0.8;
+	const TIME_INTERVAL_MS = 50;
+
+	var DEPTH_LIMIT = 4; // 再帰の深さ
+	var bDrawPoint = true; // 点の描画の有無
+	var bDrawLine = true;// 経路の描画の有無
+	var drawItemArry = [];
+	
+	function drawTree(ctx, type, angleIN, startX, startY, depth) {
+		
+		if(type == "R") {
+			var cx = startX + UNIT_LENGTH * Math.sin((angleIN)* Math.PI / 180.0);
+			var cy = startY - UNIT_LENGTH * Math.cos((angleIN)* Math.PI / 180.0);
+			var sa = (angleIN + 90) * Math.PI / 180.0;
+			var ea = (angleIN + 45) * Math.PI / 180.0;
+
+			startX = cx + UNIT_LENGTH * Math.cos((angleIN + 45) * Math.PI / 180.0);
+			startY = cy + UNIT_LENGTH * Math.sin((angleIN + 45) * Math.PI / 180.0);
+			angleIN -= 45;
+			if(bDrawLine) {
+				drawItemArry.push([2, cx, cy, startX, startY, sa, ea ]);
+			}
+
+		} else if(type == "L") {
+			var cx = startX - UNIT_LENGTH * Math.sin((angleIN)* Math.PI / 180.0);
+			var cy = startY + UNIT_LENGTH * Math.cos((angleIN)* Math.PI / 180.0);
+			var sa = (angleIN - 90) * Math.PI / 180.0;
+			var ea = (angleIN - 45) * Math.PI / 180.0;
+			
+			startX = cx + UNIT_LENGTH * Math.cos((angleIN - 45) * Math.PI / 180.0);
+			startY = cy + UNIT_LENGTH * Math.sin((angleIN - 45) * Math.PI / 180.0);
+			angleIN += 45;		
+			if(bDrawLine) {
+				drawItemArry.push([1, cx, cy, startX, startY, sa, ea]);
+			}
+			
+		} else if(type == "S") {
+			var sx = startX;
+			var sy = startY;
+			var l = UNIT_LENGTH;
+			var ex = sx + l * Math.cos(angleIN * Math.PI / 180.0);
+			var ey = sy + l * Math.sin(angleIN * Math.PI / 180.0);
+
+			if(bDrawLine) {
+				drawItemArry.push([0, sx, sy, ex, ey]);
+			}
+
+			startX = ex;
+			startY = ey;		
+		} else {
+			return;
+		}
+		
+		if(bDrawPoint) {
+			ctx.beginPath();
+			ctx.arc(startX, startY, POINT_R*2, 0, Math.PI*2, true);
+			ctx.fill();			
+		}		
+		
+		if(depth >= DEPTH_LIMIT-1) return;
+		
+		drawTree(ctx, "L", angleIN, startX, startY, depth+1); 
+		drawTree(ctx, "S", angleIN, startX, startY, depth+1); 
+		drawTree(ctx, "R", angleIN, startX, startY, depth+1); 
+	}
+	
+	function makeTree() {
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+		ctx.clearRect(0, 0, canvas.width, canvas.height);		
+		ctx.translate( canvas.width/2, canvas.height * 2 /3 );
+		var s = (canvas.height/2 -50) /(UNIT_LENGTH * (DEPTH_LIMIT-1));
+		ctx.scale(s, -s);
+		ctx.lineWidth = 1;
+			
+		drawTree(ctx, "L", 90, 0, 0, 0); 
+		drawTree(ctx, "S", 90, 0, 0, 0); 
+		drawTree(ctx, "R", 90, 0, 0, 0); 
+	}
+	
+	const ELEM_DIV_NUM = 10;
+	var ctx;
+	var canvas;
+	var currentPathID;
+	var step;
+	var intervalID;
+	
+	function drawItem() {
+		if(currentPathID >= drawItemArry.length) {
+			clearInterval(intervalID);
+			return;
+		}
+		var e = drawItemArry[currentPathID];
+		var s = step / ELEM_DIV_NUM;
+		var s2 = (step+1) / ELEM_DIV_NUM;
+
+		if(e[0] == 0) {
+			ctx.beginPath();
+			var sx = (1-s) * e[1] + s*e[3];
+			var sy = (1-s) * e[2] + s*e[4];
+			var ex = (1-s2) * e[1] + s2*e[3];
+			var ey = (1-s2) * e[2] + s2*e[4];
+			ctx.moveTo(sx, sy);
+			ctx.lineTo(ex, ey);
+			ctx.stroke();
+		} else {
+			ctx.beginPath();
+			var da = (1-s) * e[5] + s*e[6];
+			var db = (1-s2) * e[5] + s2*e[6];
+			ctx.arc(e[1], e[2], UNIT_LENGTH, da, db, e[0] == 2);
+			ctx.stroke();
+		}
+		
+		step++;
+		if(step == ELEM_DIV_NUM) {
+			if(bDrawPoint) {
+				ctx.beginPath();
+				ctx.arc(e[3], e[4], POINT_R*2, 0, Math.PI*2, true);
+				ctx.fill();			
+			}		
+			currentPathID++;
+			step = 0;
+		}		
+	}
+	
+	function init() {
+		var ww = window.innerWidth;
+		var wh = window.innerHeight;		
+		
+		canvas = document.getElementById("mycanvas");
+		canvas.width = ww;
+		canvas.height = wh;
+		
+		if (canvas.getContext) {
+			ctx = canvas.getContext('2d');
+			ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+			ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+			makeTree();
+			ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+
+			currentPathID = 0;
+			step = 0;
+			intervalID = setInterval(drawItem, TIME_INTERVAL_MS);
+		}
+	}
+		
+	</script>
+	<style type="text/css">
+	  canvas { border: 1px solid #000000; }
+	</style>
+  </head>
+  <body onload="init()">
+  <canvas id="mycanvas" width="800" height="600"></canvas>  
+  </body>
+</html>
