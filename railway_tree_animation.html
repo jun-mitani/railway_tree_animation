@@ -82,8 +82,11 @@ body {
 	function makeTree() {
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, canvas.width, canvas.height);		
-		ctx.translate( canvas.width/2, canvas.height * 2 /3 );
-		var s = (canvas.height/2 -50) /(UNIT_LENGTH * (DEPTH_LIMIT-1));
+		ctx.translate( canvas.width/2, canvas.height * 3 /4 );
+		var s = Math.min( 
+		      (canvas.height/2 -50) /(UNIT_LENGTH * (DEPTH_LIMIT-1)),
+		      (canvas.width/2 - 50) /(UNIT_LENGTH * (DEPTH_LIMIT-1))
+			  );
 		ctx.scale(s, -s);
 		ctx.lineWidth = 1;
 			
@@ -154,6 +157,8 @@ body {
 
 			currentPathID = 0;
 			step = 0;
+			if(intervalID) clearInterval(intervalID);
+
 			intervalID = setInterval(drawItem, TIME_INTERVAL_MS);
 		}
 	}
@@ -163,7 +168,7 @@ body {
 	  canvas { border: 1px solid #000000; }
 	</style>
   </head>
-  <body onload="init()">
+  <body onload="init()" onresize="init()"> 
   <canvas id="mycanvas" width="800" height="600"></canvas>  
   </body>
 </html>
